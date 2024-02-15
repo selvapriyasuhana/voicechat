@@ -1,0 +1,197 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Chat</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Voice Chat</h1>
+        <div id="chat"></div>
+
+        
+        <button id="startMic">Start Microphone</button>
+        <button id="stopMic">Stop Microphone</button>
+
+        
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+            let mediaRecorder;
+            let stream;
+
+            // Function to start capturing audio from the microphone
+            function startMicrophone() {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(audioStream => {
+                        stream = audioStream;
+                        mediaRecorder = new MediaRecorder(audioStream,{
+                mimeType: 'audio/webm;codecs=opus', // Use Opus codec for better quality
+                audioBitsPerSecond: 128000 // Set higher bitrate for better audio quality
+            });
+
+                        mediaRecorder.ondataavailable = event => {
+                            socket.emit('voice_message', event.data);
+                        };
+
+                        mediaRecorder.start();
+                    })
+                    .catch(err => {
+                        console.error('Error accessing microphone:', err);
+                    });
+            }
+
+            // Function to stop capturing audio from the microphone
+            function stopMicrophone() {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    stream.getTracks().forEach(track => track.stop());
+                }
+            }
+
+            // Event listeners for microphone controls
+            document.getElementById('startMic').addEventListener('click', startMicrophone);
+            document.getElementById('stopMic').addEventListener('click', stopMicrophone);
+
+            // Receive voice messages from the server and play them
+            socket.on('voice_message', data => {
+                const audio = new Audio();
+                audio.src = URL.createObjectURL(new Blob([data], { type: 'audio/webm' }));
+                audio.play();
+            });
+        </script>
+    </div>
+</body>
+</html>  -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Chat</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            text-align: center;
+        }
+        .play-button {
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            border-left: 15px solid #333;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .play-button.playing {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Voice Chat</h1>
+        <div id="chat"></div>
+
+        <button id="startMic">Start Microphone</button>
+        <button id="stopMic">Stop Microphone</button>
+        <button id="playRecording" class="play-button"></button>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+            let mediaRecorder;
+            let stream;
+            let recordedChunks = [];
+            let isPlaying = false;
+            let audio;
+
+            // Function to start capturing audio from the microphone
+            function startMicrophone() {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(audioStream => {
+                        stream = audioStream;
+                        mediaRecorder = new MediaRecorder(audioStream, {
+                            mimeType: 'audio/webm;codecs=opus', // Use Opus codec for better quality
+                            audioBitsPerSecond: 128000 // Set higher bitrate for better audio quality
+                        });
+
+                        mediaRecorder.ondataavailable = event => {
+                            recordedChunks.push(event.data);
+                        };
+
+                        mediaRecorder.start();
+                    })
+                    .catch(err => {
+                        console.error('Error accessing microphone:', err);
+                    });
+            }
+
+            // Function to stop capturing audio from the microphone
+            function stopMicrophone() {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    stream.getTracks().forEach(track => track.stop());
+                }
+            }
+
+            // Event listener for start microphone button
+            document.getElementById('startMic').addEventListener('click', startMicrophone);
+
+            // Event listener for stop microphone button
+            document.getElementById('stopMic').addEventListener('click', stopMicrophone);
+
+            // Function to play or stop the recorded audio
+            function togglePlayRecording() {
+                if (!isPlaying) {
+                    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(blob);
+                    audio = new Audio(audioUrl);
+                    audio.play();
+                    isPlaying = true;
+                    document.getElementById('playRecording').classList.add('playing');
+                    audio.onended = () => {
+                        isPlaying = false;
+                        document.getElementById('playRecording').classList.remove('playing');
+                    };
+                } else {
+                    audio.pause();
+                    isPlaying = false;
+                    document.getElementById('playRecording').classList.remove('playing');
+                }
+            }
+
+            // Event listener for play recording button
+            document.getElementById('playRecording').addEventListener('click', togglePlayRecording);
+
+            // Receive voice messages from the server and play them
+            socket.on('voice_message', data => {
+                const audio = new Audio();
+                audio.src = URL.createObjectURL(new Blob([data], { type: 'audio/webm' }));
+                audio.play();
+            });
+        </script>
+    </div>
+</body>
+</html>
+
+
